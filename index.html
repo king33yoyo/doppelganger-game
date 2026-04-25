@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分身大赏</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <transition name="fade" mode="out-in">
+            <div v-if="!isLoggedIn" key="login" class="login-wrapper">
+                <login-page @login="handleLogin"></login-page>
+            </div>
+            <div v-else key="main" class="app-wrapper">
+                <nav-bar
+                    :user="currentUser"
+                    :season="currentSeason"
+                    @logout="handleLogout"
+                    @navigate="navigate"
+                ></nav-bar>
+                <main class="main-content">
+                    <transition name="slide" mode="out-in">
+                        <member-wall
+                            v-if="currentRoute === '/' || currentRoute === ''"
+                            :members="members"
+                            :entries="entries"
+                            :season="currentSeason"
+                            @view-member="viewMember"
+                        ></member-wall>
+                        <upload-page
+                            v-else-if="currentRoute === '/upload'"
+                            :members="members"
+                            :season="currentSeason"
+                            :user="currentUser"
+                            @submit="handleSubmitEntry"
+                        ></upload-page>
+                        <vote-page
+                            v-else-if="currentRoute === '/vote'"
+                            :entries="entries"
+                            :members="members"
+                            :votes="userVotes"
+                            :season="currentSeason"
+                            :user="currentUser"
+                            @vote="handleVote"
+                        ></vote-page>
+                        <leaderboard-page
+                            v-else-if="currentRoute === '/leaderboard'"
+                            :entries="entries"
+                            :members="members"
+                            :all-votes="allVotes"
+                            :season="currentSeason"
+                        ></leaderboard-page>
+                        <history-page
+                            v-else-if="currentRoute === '/history'"
+                            :archives="archives"
+                            :members="members"
+                        ></history-page>
+                        <admin-panel
+                            v-else-if="currentRoute === '/admin' && currentUser.isAdmin"
+                            :season="currentSeason"
+                            :members="members"
+                            :all-votes="allVotes"
+                            :entries="entries"
+                            @change-phase="handleChangePhase"
+                            @archive-season="handleArchiveSeason"
+                        ></admin-panel>
+                        <member-detail
+                            v-else-if="currentRoute.startsWith('/member/')"
+                            :member-id="currentRoute.split('/member/')[1]"
+                            :members="members"
+                            :entries="entries"
+                            :season="currentSeason"
+                            @back="navigate('/')"
+                        ></member-detail>
+                    </transition>
+                </main>
+            </div>
+        </transition>
+        <div v-if="notification" class="notification" :class="notification.type">
+            {{ notification.message }}
+        </div>
+        <div v-if="loading" class="loading-overlay">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
