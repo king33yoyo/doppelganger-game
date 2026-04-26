@@ -566,7 +566,7 @@ const MemberDetail = {
             <button class="back-btn" @click="$emit('back')">← 返回成员图鉴</button>
             <div class="member-detail-header">
                 <div class="member-detail-avatar" style="position:relative;cursor:pointer;" @click="canUploadAvatar && $refs.avatarInput.click()">
-                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''" @error="_localAvatar = null; if(member) member.avatarUrl = ''">
+                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''" @error="localAvatar = null; if(member) member.avatarUrl = ''">
                     <div v-else class="member-avatar-placeholder" :style="{ background: member ? memberAvatarColor(member.name) : '#ccc', width: '100%', height: '100%' }">
                         {{ member ? getInitial(member.name) : '?' }}
                     </div>
@@ -588,12 +588,12 @@ const MemberDetail = {
                         @mousedown="cropStart" @touchstart.prevent="cropStart">
                         <img ref="cropImg" :src="cropSrc" class="crop-image"
                             :style="{
-                                width: _fitW + 'px',
-                                height: _fitH + 'px',
+                                width: fitW + 'px',
+                                height: fitH + 'px',
                                 left: '50%',
                                 top: '50%',
-                                marginLeft: (-_fitW / 2) + 'px',
-                                marginTop: (-_fitH / 2) + 'px',
+                                marginLeft: (-fitW / 2) + 'px',
+                                marginTop: (-fitH / 2) + 'px',
                                 transform: 'scale(' + cropZoom + ') translate(' + cropX + 'px,' + cropY + 'px)'
                             }">
                         <div class="crop-mask"></div>
@@ -630,9 +630,9 @@ const MemberDetail = {
     data() {
         return {
             cropModal: false, cropSrc: '', cropZoom: 1, cropX: 0, cropY: 0,
-            _dragging: false, _dragStart: null, _pendingFile: null,
-            _localAvatar: null, _resizedW: 0, _resizedH: 0,
-            _fitW: 0, _fitH: 0
+            dragging: false, dragStart: null, pendingFile: null,
+            localAvatar: null, resizedW: 0, resizedH: 0,
+            fitW: 0, fitH: 0
         };
     },
     computed: {
@@ -650,7 +650,7 @@ const MemberDetail = {
             return this.currentUser && this.currentUser.isAdmin;
         },
         avatarUrl() {
-            if (this._localAvatar) return this._localAvatar;
+            if (this.localAvatar) return this.localAvatar;
             if (this.member && this.member.avatarUrl) return this.member.avatarUrl;
             return '';
         }
@@ -664,7 +664,7 @@ const MemberDetail = {
         onAvatarFileSelect(e) {
             const file = e.target.files[0];
             if (!file) return;
-            this._pendingFile = file;
+            this.pendingFile = file;
             const img = new Image();
             img.onload = () => {
                 const maxDim = 800;
@@ -677,12 +677,12 @@ const MemberDetail = {
                 const c = document.createElement('canvas');
                 c.width = w; c.height = h;
                 c.getContext('2d').drawImage(img, 0, 0, w, h);
-                this._resizedW = w; this._resizedH = h;
+                this.resizedW = w; this.resizedH = h;
                 // fit into 280px container
                 const containerSize = 280;
                 const fitRatio = Math.min(containerSize / w, containerSize / h);
-                this._fitW = Math.round(w * fitRatio);
-                this._fitH = Math.round(h * fitRatio);
+                this.fitW = Math.round(w * fitRatio);
+                this.fitH = Math.round(h * fitRatio);
                 this.cropSrc = c.toDataURL('image/jpeg', 0.9);
                 this.cropZoom = 1; this.cropX = 0; this.cropY = 0;
                 this.cropModal = true;
@@ -692,16 +692,16 @@ const MemberDetail = {
             e.target.value = '';
         },
         cropStart(e) {
-            this._dragging = true;
+            this.dragging = true;
             const pt = e.touches ? e.touches[0] : e;
-            this._dragStart = { x: pt.clientX - this.cropX, y: pt.clientY - this.cropY };
+            this.dragStart = { x: pt.clientX - this.cropX, y: pt.clientY - this.cropY };
             const move = (ev) => {
-                if (!this._dragging) return;
+                if (!this.dragging) return;
                 const p = ev.touches ? ev.touches[0] : ev;
-                this.cropX = p.clientX - this._dragStart.x;
-                this.cropY = p.clientY - this._dragStart.y;
+                this.cropX = p.clientX - this.dragStart.x;
+                this.cropY = p.clientY - this.dragStart.y;
             };
-            const up = () => { this._dragging = false; document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+            const up = () => { this.dragging = false; document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
             document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
             document.addEventListener('touchmove', move); document.addEventListener('touchend', up);
         },
@@ -709,8 +709,8 @@ const MemberDetail = {
             const img = this.$refs.cropImg;
             if (!img) return;
             const containerSize = this.$refs.cropContainer.clientWidth;
-            const displayW = this._fitW;
-            const displayH = this._fitH;
+            const displayW = this.fitW;
+            const displayH = this.fitH;
             // image is centered via margin, offset is drag displacement
             const offsetX = this.cropX;
             const offsetY = this.cropY;
@@ -718,7 +718,7 @@ const MemberDetail = {
             const cropCX = containerSize / 2;
             const cropCY = containerSize / 2;
             // scale from display (fitW) to resized source
-            const scaleToOrig = this._resizedW / displayW;
+            const scaleToOrig = this.resizedW / displayW;
             const size = 200;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
@@ -737,7 +737,7 @@ const MemberDetail = {
                     const imagePath = `images/members/${this.memberId}.jpg`;
                     await GitHub.uploadImage(imagePath, base64, `上传头像: ${this.memberId}`);
                     const url = getImageUrl(imagePath) + '?t=' + Date.now();
-                    this._localAvatar = url;
+                    this.localAvatar = url;
                     const m = Store.members.find(m => m.username === this.memberId);
                     if (m) m.avatarUrl = url;
                     Store.notify('头像上传成功', 'success');
@@ -1257,8 +1257,8 @@ const app = createApp({
         if (session) {
             Store.currentUser = session.user;
             this.currentUser = session.user;
-            this.isLoggedIn = true;
             await this.loadAllData();
+            this.isLoggedIn = true;
         }
     },
     methods: {
@@ -1267,8 +1267,8 @@ const app = createApp({
             if (session) {
                 Store.currentUser = session.user;
                 this.currentUser = session.user;
-                this.isLoggedIn = true;
                 await this.loadAllData();
+                this.isLoggedIn = true;
             }
         },
         handleLogout() {
