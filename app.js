@@ -458,7 +458,10 @@ const NavBar = {
                     <button class="nav-link" v-if="user && user.isAdmin" :class="{ active: route === '/admin' }" @click="$emit('navigate', '/admin')">管理</button>
                 </div>
                 <div class="nav-user">
-                    <div class="nav-avatar" :style="{ background: memberAvatarColor(user.username) }">{{ getInitial(user.username) }}</div>
+                    <div class="nav-avatar" v-if="userAvatar" style="padding:0;overflow:hidden;">
+                        <img :src="userAvatar" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <div class="nav-avatar" v-else :style="{ background: memberAvatarColor(user.username) }">{{ getInitial(user.username) }}</div>
                     <span class="nav-username">{{ user.username }}</span>
                     <button class="nav-logout" @click="$emit('logout')">退出</button>
                 </div>
@@ -468,7 +471,12 @@ const NavBar = {
     props: ['user', 'season'],
     computed: {
         route() { return Store.currentRoute; },
-        phase() { return this.season ? this.season.phase : ''; }
+        phase() { return this.season ? this.season.phase : ''; },
+        userAvatar() {
+            if (!this.user) return '';
+            const m = Store.members.find(m => m.username === this.user.username);
+            return m && m.avatarUrl ? m.avatarUrl : '';
+        }
     },
     methods: {
         memberAvatarColor,
@@ -526,11 +534,12 @@ const MemberWall = {
                     <div class="member-card-strip" :style="{ background: 'linear-gradient(90deg, ' + getTypeColor(idx) + ', ' + getTypeColor(idx) + '88)' }"></div>
                     <div class="member-card-body">
                         <div class="member-dex-num">#{{ String(idx + 1).padStart(3, '0') }}</div>
-                        <div class="member-avatar">
-                            <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.name" loading="lazy" @error="m.avatarUrl = ''">
-                            <div v-else class="member-avatar-placeholder" :style="{ background: memberAvatarColor(m.name) }">
+                        <div class="member-avatar" style="position:relative;">
+                            <div class="member-avatar-placeholder" :style="{ background: memberAvatarColor(m.name) }">
                                 {{ getInitial(m.name) }}
                             </div>
+                            <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.name" loading="lazy"
+                                 style="position:absolute;inset:0;" @error="$event.target.style.display='none'">
                         </div>
                         <div class="member-name">{{ m.name }}</div>
                         <div class="member-count">
@@ -1288,7 +1297,7 @@ const app = createApp({
             if (!GitHub.token && !Store.demoMode) {
                 const year = new Date().getFullYear().toString();
                 Store.currentSeason = { name: `${year} 030精灵捕捉大赛`, year, phase: 'upload', startedAt: new Date().toISOString() };
-                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) + '?t=' + Date.now() }));
+                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
                 Store.entries = [];
                 Store.allVotes = [];
                 Store.userVotes = { entryIds: [] };
@@ -1317,14 +1326,14 @@ const app = createApp({
                                 try {
                                     const { content } = await GitHub.getFile(`data/members/${f.name}`);
                                     const username = f.name.replace('.json', '');
-                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) + '?t=' + Date.now() };
+                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) };
                                 } catch { return null; }
                             })
                         );
                         Store.members = memberData.filter(Boolean);
                         if (Store.members.length === 0) throw new Error('no members');
                     } catch {
-                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) + '?t=' + Date.now() }));
+                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
                     }
 
                     try {

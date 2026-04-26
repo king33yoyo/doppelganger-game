@@ -991,6 +991,7 @@ h4 { font-size: 1.05rem; font-weight: 600; }
     .member-avatar { width: 48px; height: 48px; }
     .nav-links { gap: 0; }
     .nav-link { padding: 6px 8px; font-size: 0.78rem; }
+    .nickname-chip { flex: 1 1 calc(20% - 4px); font-size: 0.78rem; padding: 5px 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
