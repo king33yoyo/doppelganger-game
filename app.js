@@ -18,8 +18,8 @@ function base64Decode(b64) {
 }
 
 function getImageUrl(path) {
-    const owner = Store.config?.repoOwner || 'king33yoyo';
-    const repo = Store.config?.repoName || 'doppelganger-game';
+    const owner = GitHub.owner || Store.config?.repoOwner || 'king33yoyo';
+    const repo = GitHub.repo || Store.config?.repoName || 'doppelganger-game';
     return `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
 }
 
@@ -580,7 +580,7 @@ const MemberDetail = {
             <button class="back-btn" @click="$emit('back')">← 返回成员图鉴</button>
             <div class="member-detail-header">
                 <div class="member-detail-avatar" style="position:relative;cursor:pointer;" @click="canUploadAvatar && $refs.avatarInput.click()">
-                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''">
+                    <img v-if="avatarUrl && !detailAvatarErr" :src="avatarUrl" :alt="member ? member.name : ''" @error="detailAvatarErr = true">
                     <div v-else class="member-avatar-placeholder" :style="{ background: member ? memberAvatarColor(member.name) : '#ccc', width: '100%', height: '100%' }">
                         {{ member ? getInitial(member.name) : '?' }}
                     </div>
@@ -646,7 +646,7 @@ const MemberDetail = {
             cropModal: false, cropSrc: '', cropZoom: 1, cropX: 0, cropY: 0,
             dragging: false, dragStart: null, pendingFile: null,
             localAvatar: null, resizedW: 0, resizedH: 0,
-            fitW: 0, fitH: 0
+            fitW: 0, fitH: 0, detailAvatarErr: false
         };
     },
     computed: {
