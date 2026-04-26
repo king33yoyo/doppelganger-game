@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>分身大赏</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>030精灵捕捉大赛</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <transition name="fade" mode="out-in">
             <div v-if="!isLoggedIn" key="login" class="login-wrapper">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png" class="login-pokemon-deco left" alt="">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png" class="login-pokemon-deco right" alt="">
                 <login-page @login="handleLogin"></login-page>
             </div>
             <div v-else key="main" class="app-wrapper">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png" class="pokemon-bg pokemon-bg-1" alt="">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png" class="pokemon-bg pokemon-bg-2" alt="">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png" class="pokemon-bg pokemon-bg-3" alt="">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/131.png" class="pokemon-bg pokemon-bg-4" alt="">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png" class="pokemon-bg pokemon-bg-5" alt="">
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/143.png" class="pokemon-bg pokemon-bg-6" alt="">
                 <nav-bar
                     :user="currentUser"
                     :season="currentSeason"
@@ -68,11 +76,13 @@
                         ></admin-panel>
                         <member-detail
                             v-else-if="currentRoute.startsWith('/member/')"
-                            :member-id="currentRoute.split('/member/')[1]"
+                            :member-id="decodeURIComponent(currentRoute.split('/member/')[1])"
                             :members="members"
                             :entries="entries"
                             :season="currentSeason"
+                            :current-user="currentUser"
                             @back="navigate('/')"
+                            @avatar-uploaded="loadAllData"
                         ></member-detail>
                     </transition>
                 </main>
