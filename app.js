@@ -18,11 +18,9 @@ function base64Decode(b64) {
 }
 
 function getImageUrl(path) {
-    if (Store.demoMode) {
-        const data = localStorage.getItem('dg_demo_img:' + path);
-        return data || '';
-    }
-    return `https://raw.githubusercontent.com/${Store.config.repoOwner}/${Store.config.repoName}/main/${path}`;
+    const owner = Store.config?.repoOwner || 'king33yoyo';
+    const repo = Store.config?.repoName || 'doppelganger-game';
+    return `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}`;
 }
 
 function memberAvatarColor(name) {
@@ -565,22 +563,44 @@ const MemberWall = {
 const MemberDetail = {
     template: `
         <div class="container">
-            <button class="back-btn" @click="$emit('back')">← 返回成员墙</button>
+            <button class="back-btn" @click="$emit('back')">← 返回成员图鉴</button>
             <div class="member-detail-header">
                 <div class="member-detail-avatar" style="position:relative;cursor:pointer;" @click="canUploadAvatar && $refs.avatarInput.click()">
-                    <img v-if="member && member.avatarUrl" :src="member.avatarUrl" :alt="member.name">
+                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''">
                     <div v-else class="member-avatar-placeholder" :style="{ background: member ? memberAvatarColor(member.name) : '#ccc', width: '100%', height: '100%' }">
                         {{ member ? getInitial(member.name) : '?' }}
                     </div>
-                    <div v-if="canUploadAvatar && !member?.avatarUrl" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:0.75rem;text-align:center;padding:4px;">上传头像</div>
+                    <div v-if="canUploadAvatar" style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:0.72rem;text-align:center;padding:3px;">点击更换</div>
                 </div>
-                <input type="file" ref="avatarInput" accept="image/*" style="display:none" @change="uploadAvatar">
+                <input type="file" ref="avatarInput" accept="image/*" style="display:none" @change="onAvatarFileSelect">
                 <div>
                     <h2>{{ member ? member.name : '未知成员' }}</h2>
                     <p style="color: var(--c-text-muted);">{{ memberEntries.length }} 个精灵</p>
                     <button class="btn btn-primary" style="margin-top: 10px; padding: 8px 18px; font-size: 0.85rem;" @click="goUpload">上传精灵</button>
                 </div>
             </div>
+
+            <!-- Avatar crop modal -->
+            <div v-if="cropModal" class="crop-overlay" @click.self="cropModal=false">
+                <div class="crop-modal">
+                    <h3>调整头像</h3>
+                    <div class="crop-container" ref="cropContainer"
+                        @mousedown="cropStart" @touchstart.prevent="cropStart">
+                        <img ref="cropImg" :src="cropSrc" class="crop-image"
+                            :style="{ transform: 'scale(' + cropZoom + ') translate(' + cropX + 'px,' + cropY + 'px)' }">
+                        <div class="crop-mask"></div>
+                    </div>
+                    <div class="crop-controls">
+                        <label class="form-label">缩放</label>
+                        <input type="range" min="0.5" max="3" step="0.05" v-model.number="cropZoom" class="crop-slider">
+                    </div>
+                    <div class="crop-actions">
+                        <button class="btn btn-outline" @click="cropModal=false">取消</button>
+                        <button class="btn btn-primary" @click="cropAndUpload">确认</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="entry-grid">
                 <div class="entry-card" v-for="e in memberEntries" :key="e.id" style="position:relative;">
                     <div class="entry-photo">
@@ -599,6 +619,13 @@ const MemberDetail = {
         </div>
     `,
     props: ['memberId', 'members', 'entries', 'season', 'currentUser'],
+    data() {
+        return {
+            cropModal: false, cropSrc: '', cropZoom: 1, cropX: 0, cropY: 0,
+            _dragging: false, _dragStart: null, _pendingFile: null,
+            _localAvatar: null
+        };
+    },
     computed: {
         member() {
             return this.members.find(m => m.username === this.memberId);
@@ -612,6 +639,11 @@ const MemberDetail = {
         },
         canDelete() {
             return this.currentUser && this.currentUser.isAdmin;
+        },
+        avatarUrl() {
+            if (this._localAvatar) return this._localAvatar;
+            if (this.member && this.member.avatarUrl) return this.member.avatarUrl;
+            return '';
         }
     },
     methods: {
@@ -619,6 +651,65 @@ const MemberDetail = {
         goUpload() {
             Store.preSelectedMember = this.memberId;
             window.location.hash = '/upload';
+        },
+        onAvatarFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            this._pendingFile = file;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                this.cropSrc = ev.target.result;
+                this.cropZoom = 1; this.cropX = 0; this.cropY = 0;
+                this.cropModal = true;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        },
+        cropStart(e) {
+            this._dragging = true;
+            const pt = e.touches ? e.touches[0] : e;
+            this._dragStart = { x: pt.clientX - this.cropX, y: pt.clientY - this.cropY };
+            const move = (ev) => {
+                if (!this._dragging) return;
+                const p = ev.touches ? ev.touches[0] : ev;
+                this.cropX = p.clientX - this._dragStart.x;
+                this.cropY = p.clientY - this._dragStart.y;
+            };
+            const up = () => { this._dragging = false; document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up); };
+            document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+            document.addEventListener('touchmove', move); document.addEventListener('touchend', up);
+        },
+        async cropAndUpload() {
+            const img = this.$refs.cropImg;
+            if (!img) return;
+            const size = 200;
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const rect = this.$refs.cropContainer.getBoundingClientRect();
+            const containerSize = rect.width;
+            const scale = img.naturalWidth / (containerSize * this.cropZoom);
+            const cx = containerSize / 2 - this.cropX;
+            const cy = containerSize / 2 - this.cropY;
+            const sx = (cx - containerSize / 2) * scale;
+            const sy = (cy - containerSize / 2) * scale;
+            const sSize = (containerSize / 2) * scale;
+            ctx.drawImage(img, sx + img.naturalWidth / 2 - sSize, sy + img.naturalHeight / 2 - sSize, sSize * 2, sSize * 2, 0, 0, size, size);
+            const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+            this.cropModal = false;
+            await Store.setLoading(async () => {
+                try {
+                    const imagePath = `images/members/${this.memberId}.jpg`;
+                    await GitHub.uploadImage(imagePath, base64, `上传头像: ${this.memberId}`);
+                    const url = getImageUrl(imagePath) + '?t=' + Date.now();
+                    this._localAvatar = url;
+                    const m = Store.members.find(m => m.username === this.memberId);
+                    if (m) m.avatarUrl = url;
+                    Store.notify('头像上传成功', 'success');
+                } catch (err) {
+                    Store.notify('头像上传失败：' + err.message, 'error');
+                }
+            });
         },
         async deleteEntry(entry) {
             if (!confirm('确定删除这张精灵照片？')) return;
@@ -638,21 +729,6 @@ const MemberDetail = {
                     Store.notify('已删除', 'success');
                     this.$emit('avatar-uploaded');
                 } catch (e) { Store.notify('删除失败：' + e.message, 'error'); }
-            });
-        },
-        async uploadAvatar(e) {
-            const file = e.target.files[0];
-            if (!file || !this.member) return;
-            await Store.setLoading(async () => {
-                try {
-                    const compressed = await ImageUtils.compress(file, 400);
-                    const imagePath = `images/members/${this.memberId}.jpg`;
-                    await GitHub.uploadImage(imagePath, compressed, `上传头像: ${this.memberId}`);
-                    Store.notify('头像上传成功，刷新后生效', 'success');
-                    this.$emit('avatar-uploaded');
-                } catch (err) {
-                    Store.notify('头像上传失败：' + err.message, 'error');
-                }
             });
         }
     }

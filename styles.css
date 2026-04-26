@@ -776,6 +776,69 @@ h4 { font-size: 1.05rem; font-weight: 600; }
 }
 .entry-delete-btn:hover { background: var(--c-red); }
 
+/* ===== Avatar Crop Modal ===== */
+
+.crop-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.crop-modal {
+    background: #fff; border-radius: var(--r-lg);
+    padding: 24px; width: 90%; max-width: 380px;
+    box-shadow: var(--s-lg);
+    animation: bounceIn 0.3s var(--ease-bounce);
+}
+
+.crop-modal h3 {
+    text-align: center; margin-bottom: 16px;
+    color: var(--c-blue-deep);
+}
+
+.crop-container {
+    width: 280px; height: 280px;
+    margin: 0 auto 16px;
+    border-radius: var(--r-full);
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    cursor: grab;
+}
+
+.crop-container:active { cursor: grabbing; }
+
+.crop-image {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform-origin: center;
+    max-width: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.crop-mask {
+    position: absolute; inset: 0;
+    border-radius: var(--r-full);
+    box-shadow: 0 0 0 200px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
+.crop-controls {
+    margin-bottom: 16px; padding: 0 8px;
+}
+
+.crop-slider {
+    width: 100%; accent-color: var(--c-blue);
+}
+
+.crop-actions {
+    display: flex; gap: 10px;
+}
+
+.crop-actions .btn { flex: 1; }
+
 /* ===== Admin Panel ===== */
 
 .admin-grid {
