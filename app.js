@@ -587,7 +587,15 @@ const MemberDetail = {
                     <div class="crop-container" ref="cropContainer"
                         @mousedown="cropStart" @touchstart.prevent="cropStart">
                         <img ref="cropImg" :src="cropSrc" class="crop-image"
-                            :style="{ transform: 'scale(' + cropZoom + ') translate(' + cropX + 'px,' + cropY + 'px)' }">
+                            :style="{
+                                width: _fitW + 'px',
+                                height: _fitH + 'px',
+                                left: '50%',
+                                top: '50%',
+                                marginLeft: (-_fitW / 2) + 'px',
+                                marginTop: (-_fitH / 2) + 'px',
+                                transform: 'scale(' + cropZoom + ') translate(' + cropX + 'px,' + cropY + 'px)'
+                            }">
                         <div class="crop-mask"></div>
                     </div>
                     <div class="crop-controls">
@@ -623,7 +631,8 @@ const MemberDetail = {
         return {
             cropModal: false, cropSrc: '', cropZoom: 1, cropX: 0, cropY: 0,
             _dragging: false, _dragStart: null, _pendingFile: null,
-            _localAvatar: null
+            _localAvatar: null, _resizedW: 0, _resizedH: 0,
+            _fitW: 0, _fitH: 0
         };
     },
     computed: {
@@ -656,13 +665,30 @@ const MemberDetail = {
             const file = e.target.files[0];
             if (!file) return;
             this._pendingFile = file;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                this.cropSrc = ev.target.result;
+            const img = new Image();
+            img.onload = () => {
+                const maxDim = 800;
+                let w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    const ratio = Math.min(maxDim / w, maxDim / h);
+                    w = Math.round(w * ratio);
+                    h = Math.round(h * ratio);
+                }
+                const c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                this._resizedW = w; this._resizedH = h;
+                // fit into 280px container
+                const containerSize = 280;
+                const fitRatio = Math.min(containerSize / w, containerSize / h);
+                this._fitW = Math.round(w * fitRatio);
+                this._fitH = Math.round(h * fitRatio);
+                this.cropSrc = c.toDataURL('image/jpeg', 0.9);
                 this.cropZoom = 1; this.cropX = 0; this.cropY = 0;
                 this.cropModal = true;
+                URL.revokeObjectURL(img.src);
             };
-            reader.readAsDataURL(file);
+            img.src = URL.createObjectURL(file);
             e.target.value = '';
         },
         cropStart(e) {
@@ -682,19 +708,28 @@ const MemberDetail = {
         async cropAndUpload() {
             const img = this.$refs.cropImg;
             if (!img) return;
+            const containerSize = this.$refs.cropContainer.clientWidth;
+            const displayW = this._fitW;
+            const displayH = this._fitH;
+            // image is centered via margin, offset is drag displacement
+            const offsetX = this.cropX;
+            const offsetY = this.cropY;
+            const cropRadius = containerSize / 2;
+            const cropCX = containerSize / 2;
+            const cropCY = containerSize / 2;
+            // scale from display (fitW) to resized source
+            const scaleToOrig = this._resizedW / displayW;
             const size = 200;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            const rect = this.$refs.cropContainer.getBoundingClientRect();
-            const containerSize = rect.width;
-            const scale = img.naturalWidth / (containerSize * this.cropZoom);
-            const cx = containerSize / 2 - this.cropX;
-            const cy = containerSize / 2 - this.cropY;
-            const sx = (cx - containerSize / 2) * scale;
-            const sy = (cy - containerSize / 2) * scale;
-            const sSize = (containerSize / 2) * scale;
-            ctx.drawImage(img, sx + img.naturalWidth / 2 - sSize, sy + img.naturalHeight / 2 - sSize, sSize * 2, sSize * 2, 0, 0, size, size);
+            // center of crop circle relative to image top-left (in display coords)
+            const imgLeft = (containerSize - displayW) / 2 + offsetX;
+            const imgTop = (containerSize - displayH) / 2 + offsetY;
+            const srcCX = (cropCX - imgLeft) * scaleToOrig;
+            const srcCY = (cropCY - imgTop) * scaleToOrig;
+            const srcR = cropRadius * scaleToOrig;
+            ctx.drawImage(img, srcCX - srcR, srcCY - srcR, srcR * 2, srcR * 2, 0, 0, size, size);
             const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
             this.cropModal = false;
             await Store.setLoading(async () => {
