@@ -707,28 +707,29 @@ const MemberDetail = {
         },
         async cropAndUpload() {
             const img = this.$refs.cropImg;
-            if (!img) return;
-            const containerSize = this.$refs.cropContainer.clientWidth;
-            const displayW = this.fitW;
-            const displayH = this.fitH;
-            // image is centered via margin, offset is drag displacement
-            const offsetX = this.cropX;
-            const offsetY = this.cropY;
-            const cropRadius = containerSize / 2;
-            const cropCX = containerSize / 2;
-            const cropCY = containerSize / 2;
-            // scale from display (fitW) to resized source
-            const scaleToOrig = this.resizedW / displayW;
+            const container = this.$refs.cropContainer;
+            if (!img || !container) return;
+            // Use actual rendered positions from browser (accounts for CSS transform)
+            const imgRect = img.getBoundingClientRect();
+            const contRect = container.getBoundingClientRect();
+            const imgLeft = imgRect.left - contRect.left;
+            const imgTop = imgRect.top - contRect.top;
+            const imgDisplayW = imgRect.width;
+            const imgDisplayH = imgRect.height;
+            // Crop circle at container center
+            const cropCX = contRect.width / 2;
+            const cropCY = contRect.height / 2;
+            const cropR = contRect.width / 2;
+            // Map from display coords to source image coords
+            const scaleX = img.naturalWidth / imgDisplayW;
+            const scaleY = img.naturalHeight / imgDisplayH;
+            const srcCX = (cropCX - imgLeft) * scaleX;
+            const srcCY = (cropCY - imgTop) * scaleY;
+            const srcR = cropR * scaleX;
             const size = 200;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            // center of crop circle relative to image top-left (in display coords)
-            const imgLeft = (containerSize - displayW) / 2 + offsetX;
-            const imgTop = (containerSize - displayH) / 2 + offsetY;
-            const srcCX = (cropCX - imgLeft) * scaleToOrig;
-            const srcCY = (cropCY - imgTop) * scaleToOrig;
-            const srcR = cropRadius * scaleToOrig;
             ctx.drawImage(img, srcCX - srcR, srcCY - srcR, srcR * 2, srcR * 2, 0, 0, size, size);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             const base64 = dataUrl.split(',')[1];
