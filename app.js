@@ -451,7 +451,7 @@ const NavBar = {
                     <button class="nav-link" :class="{ active: route === '/vote', disabled: phase !== 'vote' }" @click="phase === 'vote' && $emit('navigate', '/vote')">
                         投票<span class="badge badge-vote" v-if="phase === 'vote'">开放</span>
                     </button>
-                    <button class="nav-link" :class="{ active: route === '/leaderboard', disabled: phase !== 'result' }" @click="phase === 'result' && $emit('navigate', '/leaderboard')">
+                    <button class="nav-link" :class="{ active: route === '/leaderboard' }" @click="$emit('navigate', '/leaderboard')">
                         排行榜<span class="badge badge-result" v-if="phase === 'result'">揭晓</span>
                     </button>
                     <button class="nav-link" :class="{ active: route === '/history' }" @click="$emit('navigate', '/history')">历史</button>
@@ -1022,44 +1022,94 @@ const LeaderboardPage = {
         <div class="container">
             <season-banner :season="season"></season-banner>
             <div class="page-header">
-                <h2>排行榜</h2>
-                <p>年度最佳精灵花落谁家</p>
+                <h2>{{ isUpload ? '上传排行' : '排行榜' }}</h2>
+                <p>{{ isUpload ? '谁是最佳精灵捕手' : '年度最佳精灵花落谁家' }}</p>
             </div>
-            <div class="leaderboard-list">
-                <div class="ranking-card" v-for="(r, i) in rankings" :key="r.id"
-                    :class="{ first: i === 0 }">
-                    <div class="ranking-number">{{ i + 1 }}</div>
-                    <div class="ranking-photos">
-                        <div class="ranking-photo">
-                            <img v-if="r.targetAvatarUrl" :src="r.targetAvatarUrl" loading="lazy">
-                            <div v-else class="member-avatar-placeholder" :style="{ background: memberAvatarColor(r.targetName) }">
-                                {{ getInitial(r.targetName) }}
+            <template v-if="isUpload">
+                <div class="upload-leaderboard">
+                    <div class="upload-rank-card" v-for="(u, i) in uploadRanking" :key="u.username"
+                        :class="{ first: i === 0, second: i === 1, third: i === 2 }">
+                        <div class="upload-rank-badge">{{ i + 1 }}</div>
+                        <div class="upload-rank-avatar" style="position:relative;">
+                            <div class="member-avatar-placeholder" :style="{ background: memberAvatarColor(u.name) }">
+                                {{ getInitial(u.name) }}
+                            </div>
+                            <img v-if="u.avatarUrl && !rankImgErrors[u.username]" :src="u.avatarUrl"
+                                 style="position:absolute;inset:0;" @error="rankImgErrors[u.username] = true">
+                        </div>
+                        <div class="upload-rank-info">
+                            <div class="upload-rank-name">{{ u.name }}</div>
+                            <div class="upload-rank-count">
+                                <span class="upload-rank-num">{{ u.count }}</span> 个精灵
                             </div>
                         </div>
-                        <div class="ranking-photo">
-                            <img v-if="r.imageUrl" :src="r.imageUrl" loading="lazy">
-                            <div v-else class="member-avatar-placeholder">[photo]</div>
+                        <div class="upload-rank-thumbs">
+                            <div class="upload-rank-thumb" v-for="e in u.entries.slice(0, 4)" :key="e.id">
+                                <img v-if="e.imageUrl" :src="e.imageUrl" loading="lazy">
+                                <div v-else class="thumb-placeholder">[img]</div>
+                            </div>
+                            <div v-if="u.entries.length > 4" class="upload-rank-more">+{{ u.entries.length - 4 }}</div>
                         </div>
                     </div>
-                    <div class="ranking-details">
-                        <div class="ranking-title">{{ r.targetName }} 的精灵</div>
-                        <div class="ranking-sub">由 {{ r.submitter }} 上传</div>
-                    </div>
-                    <div class="ranking-votes">
-                        <span class="ranking-vote-count">{{ r.voteCount }}</span>
-                        <span class="ranking-vote-label">票</span>
+                </div>
+                <div v-if="uploadRanking.length === 0" class="empty-state">
+                    <div class="empty-state-icon">[camera]</div>
+                    <h3>还没有精灵上传</h3>
+                    <p>快去上传你的第一个精灵吧</p>
+                </div>
+            </template>
+            <template v-else>
+                <div class="leaderboard-list">
+                    <div class="ranking-card" v-for="(r, i) in rankings" :key="r.id"
+                        :class="{ first: i === 0 }">
+                        <div class="ranking-number">{{ i + 1 }}</div>
+                        <div class="ranking-photos">
+                            <div class="ranking-photo">
+                                <img v-if="r.targetAvatarUrl" :src="r.targetAvatarUrl" loading="lazy">
+                                <div v-else class="member-avatar-placeholder" :style="{ background: memberAvatarColor(r.targetName) }">
+                                    {{ getInitial(r.targetName) }}
+                                </div>
+                            </div>
+                            <div class="ranking-photo">
+                                <img v-if="r.imageUrl" :src="r.imageUrl" loading="lazy">
+                                <div v-else class="member-avatar-placeholder">[photo]</div>
+                            </div>
+                        </div>
+                        <div class="ranking-details">
+                            <div class="ranking-title">{{ r.targetName }} 的精灵</div>
+                            <div class="ranking-sub">由 {{ r.submitter }} 上传</div>
+                        </div>
+                        <div class="ranking-votes">
+                            <span class="ranking-vote-count">{{ r.voteCount }}</span>
+                            <span class="ranking-vote-label">票</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div v-if="rankings.length === 0" class="empty-state">
-                <div class="empty-state-icon">[trophy]</div>
-                <h3>结果尚未揭晓</h3>
-                <p>投票期结束后由管理员开启结果</p>
-            </div>
+                <div v-if="rankings.length === 0" class="empty-state">
+                    <div class="empty-state-icon">[trophy]</div>
+                    <h3>结果尚未揭晓</h3>
+                    <p>投票期结束后由管理员开启结果</p>
+                </div>
+            </template>
         </div>
     `,
     props: ['entries', 'members', 'allVotes', 'season'],
+    data() { return { rankImgErrors: {} }; },
     computed: {
+        isUpload() { return this.season ? this.season.phase === 'upload' : true; },
+        uploadRanking() {
+            const map = {};
+            this.entries.forEach(e => {
+                const s = e.submitter;
+                if (!map[s]) {
+                    const m = this.members.find(m => m.username === s);
+                    map[s] = { username: s, name: m ? m.name : s, avatarUrl: m ? m.avatarUrl : null, count: 0, entries: [] };
+                }
+                map[s].count++;
+                map[s].entries.push(e);
+            });
+            return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 5);
+        },
         rankings() {
             const voteCount = {};
             this.allVotes.forEach(v => {
@@ -1284,7 +1334,6 @@ const app = createApp({
                 Store.currentUser = session.user;
                 this.currentUser = session.user;
                 await this.loadAllData();
-                Store.notify(`数据加载完成：${Store.members.length} 位成员`, 'success');
                 this.isLoggedIn = true;
             }
         },
