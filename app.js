@@ -154,9 +154,14 @@ const GitHub = {
     },
 
     async uploadImage(imagePath, base64Data, message) {
+        let body = { message, content: base64Data };
+        try {
+            const existing = await this.api(imagePath);
+            body.sha = existing.sha;
+        } catch {}
         return this.api(imagePath, {
             method: 'PUT',
-            body: JSON.stringify({ message, content: base64Data })
+            body: JSON.stringify(body)
         });
     }
 };
