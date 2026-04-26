@@ -566,7 +566,7 @@ const MemberDetail = {
             <button class="back-btn" @click="$emit('back')">← 返回成员图鉴</button>
             <div class="member-detail-header">
                 <div class="member-detail-avatar" style="position:relative;cursor:pointer;" @click="canUploadAvatar && $refs.avatarInput.click()">
-                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''" @error="localAvatar = null; if(member) member.avatarUrl = ''">
+                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''">
                     <div v-else class="member-avatar-placeholder" :style="{ background: member ? memberAvatarColor(member.name) : '#ccc', width: '100%', height: '100%' }">
                         {{ member ? getInitial(member.name) : '?' }}
                     </div>
@@ -730,18 +730,19 @@ const MemberDetail = {
             const srcCY = (cropCY - imgTop) * scaleToOrig;
             const srcR = cropRadius * scaleToOrig;
             ctx.drawImage(img, srcCX - srcR, srcCY - srcR, srcR * 2, srcR * 2, 0, 0, size, size);
-            const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const base64 = dataUrl.split(',')[1];
             this.cropModal = false;
+            this.localAvatar = dataUrl;
             await Store.setLoading(async () => {
                 try {
                     const imagePath = `images/members/${this.memberId}.jpg`;
                     await GitHub.uploadImage(imagePath, base64, `上传头像: ${this.memberId}`);
-                    const url = getImageUrl(imagePath) + '?t=' + Date.now();
-                    this.localAvatar = url;
                     const m = Store.members.find(m => m.username === this.memberId);
-                    if (m) m.avatarUrl = url;
+                    if (m) m.avatarUrl = getImageUrl(imagePath) + '?t=' + Date.now();
                     Store.notify('头像上传成功', 'success');
                 } catch (err) {
+                    this.localAvatar = null;
                     Store.notify('头像上传失败：' + err.message, 'error');
                 }
             });
