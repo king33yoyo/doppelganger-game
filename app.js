@@ -412,10 +412,17 @@ const LoginPage = {
             this.existingMembers = files.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''));
         },
         async _loadProdMembers() {
-            const { content: config } = await GitHub.getFile('data/config.json');
-            Store.config = config;
-            const files = await GitHub.listFiles('data/members');
-            this.existingMembers = files.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''));
+            try {
+                const { content: config } = await GitHub.getFile('data/config.json');
+                Store.config = config;
+            } catch {}
+            try {
+                const files = await GitHub.listFiles('data/members');
+                const names = files.filter(f => f.name.endsWith('.json')).map(f => f.name.replace('.json', ''));
+                this.existingMembers = names.length > 0 ? names : DEMO_NAMES;
+            } catch {
+                this.existingMembers = DEMO_NAMES;
+            }
         },
         async login() {
             if (!this.selectedNickname) return;
