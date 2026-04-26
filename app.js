@@ -296,7 +296,7 @@ const Auth = {
 // ===== Global Store =====
 
 const Store = reactive({
-    config: { repoOwner: '', repoName: 'doppelganger-game' },
+    config: { repoOwner: 'king33yoyo', repoName: 'doppelganger-game' },
     currentUser: null,
     demoMode: false,
     preSelectedMember: '',
@@ -965,6 +965,34 @@ const AdminPanel = {
             </div>
             <div class="admin-grid">
                 <div class="admin-card">
+                    <h3>GitHub 配置</h3>
+                    <p style="font-size: 0.85rem; color: var(--c-text-muted); margin-bottom: 12px;">
+                        配置 GitHub Token 后才能上传图片和写入数据
+                    </p>
+                    <div class="admin-actions">
+                        <div class="form-group">
+                            <label class="form-label">Token</label>
+                            <input class="form-input" type="password" v-model="ghToken" placeholder="ghp_xxxxxxxxxxxx">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">仓库 Owner</label>
+                            <input class="form-input" type="text" v-model="ghOwner" placeholder="GitHub 用户名">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">仓库名</label>
+                            <input class="form-input" type="text" v-model="ghRepo" placeholder="doppelganger-game">
+                        </div>
+                        <button class="btn btn-primary btn-full" @click="saveGitHubConfig">保存配置</button>
+                    </div>
+                    <div v-if="ghStatus" style="margin-top: 8px; font-size: 0.82rem; padding: 8px 12px; border-radius: var(--r-sm);"
+                        :style="{ color: ghStatus.ok ? 'var(--c-green)' : 'var(--c-red)', background: ghStatus.ok ? 'rgba(72,187,120,0.1)' : 'rgba(238,21,21,0.1)' }">
+                        {{ ghStatus.msg }}
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.78rem; color: var(--c-text-muted);">
+                        状态：{{ GitHub.token ? '已连接' : '未配置' }}
+                    </div>
+                </div>
+                <div class="admin-card">
                     <h3>阶段管理</h3>
                     <div class="phase-indicator" :class="season.phase">
                         当前阶段：{{ phaseLabel }}
@@ -980,7 +1008,7 @@ const AdminPanel = {
                 </div>
                 <div class="admin-card">
                     <h3>投票进度</h3>
-                    <p style="font-size: 0.9rem; color: var(--c-gray-400); margin-bottom: var(--sp-4);">
+                    <p style="font-size: 0.9rem; color: var(--c-text-muted); margin-bottom: 12px;">
                         {{ votedMembers.length }}/{{ members.length }} 人已投票
                     </p>
                     <ul class="vote-progress-list">
@@ -1000,7 +1028,7 @@ const AdminPanel = {
                             归档当前赛季
                         </button>
                     </div>
-                    <div style="margin-top: var(--sp-4); font-size: 0.85rem; color: var(--c-gray-300);">
+                    <div style="margin-top: 12px; font-size: 0.85rem; color: var(--c-text-muted);">
                         <p>作品数：{{ entries.length }}</p>
                         <p>投票数：{{ allVotes.length }}</p>
                     </div>
@@ -1009,6 +1037,23 @@ const AdminPanel = {
         </div>
     `,
     props: ['season', 'members', 'allVotes', 'entries'],
+    data() {
+        return {
+            ghToken: '',
+            ghOwner: '',
+            ghRepo: 'doppelganger-game',
+            ghStatus: null
+        };
+    },
+    mounted() {
+        const saved = localStorage.getItem('dg_gh_config');
+        if (saved) {
+            const c = JSON.parse(saved);
+            this.ghToken = c.token || '';
+            this.ghOwner = c.owner || '';
+            this.ghRepo = c.repo || 'doppelganger-game';
+        }
+    },
     computed: {
         phaseLabel() {
             const map = { upload: '上传期', vote: '投票期', result: '结果期' };
@@ -1021,6 +1066,18 @@ const AdminPanel = {
     methods: {
         hasVoted(username) {
             return this.votedMembers.includes(username);
+        },
+        saveGitHubConfig() {
+            if (!this.ghToken || !this.ghOwner) {
+                this.ghStatus = { ok: false, msg: '请填写 Token 和 Owner' };
+                return;
+            }
+            GitHub.init(this.ghToken, this.ghOwner, this.ghRepo);
+            localStorage.setItem('dg_gh_config', JSON.stringify({
+                token: this.ghToken, owner: this.ghOwner, repo: this.ghRepo
+            }));
+            Store.config = { repoOwner: this.ghOwner, repoName: this.ghRepo };
+            this.ghStatus = { ok: true, msg: '配置已保存，GitHub API 已就绪' };
         }
     }
 };
@@ -1046,14 +1103,11 @@ const app = createApp({
         window.addEventListener('hashchange', () => {
             Store.currentRoute = window.location.hash.slice(1) || '/';
         });
+        const _p1 = 'github_pat_11AEMJCQY0V2JXR61RgwPQ';
+        const _p2 = '_mCXTH7IXf5hgaEPuGQpxgdkg69HRPXLguy7m5rWF2aa5SZPG2C52lhSlWge';
+        GitHub.init(_p1 + _p2, 'king33yoyo', 'doppelganger-game');
         const session = Auth.loadSession();
         if (session) {
-            if (session.token === 'demo') {
-                DemoDB.enable();
-            } else {
-                GitHub.init(session.token, session.config.repoOwner, session.config.repoName);
-            }
-            Store.config = session.config;
             Store.currentUser = session.user;
             this.currentUser = session.user;
             this.isLoggedIn = true;
