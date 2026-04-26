@@ -1288,7 +1288,7 @@ const app = createApp({
             if (!GitHub.token && !Store.demoMode) {
                 const year = new Date().getFullYear().toString();
                 Store.currentSeason = { name: `${year} 030精灵捕捉大赛`, year, phase: 'upload', startedAt: new Date().toISOString() };
-                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
+                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) + '?t=' + Date.now() }));
                 Store.entries = [];
                 Store.allVotes = [];
                 Store.userVotes = { entryIds: [] };
@@ -1317,14 +1317,14 @@ const app = createApp({
                                 try {
                                     const { content } = await GitHub.getFile(`data/members/${f.name}`);
                                     const username = f.name.replace('.json', '');
-                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) };
+                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) + '?t=' + Date.now() };
                                 } catch { return null; }
                             })
                         );
                         Store.members = memberData.filter(Boolean);
                         if (Store.members.length === 0) throw new Error('no members');
                     } catch {
-                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
+                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) + '?t=' + Date.now() }));
                     }
 
                     try {
