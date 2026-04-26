@@ -527,7 +527,7 @@ const MemberWall = {
                     <div class="member-card-body">
                         <div class="member-dex-num">#{{ String(idx + 1).padStart(3, '0') }}</div>
                         <div class="member-avatar">
-                            <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.name" loading="lazy">
+                            <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.name" loading="lazy" @error="m.avatarUrl = ''">
                             <div v-else class="member-avatar-placeholder" :style="{ background: memberAvatarColor(m.name) }">
                                 {{ getInitial(m.name) }}
                             </div>
@@ -566,7 +566,7 @@ const MemberDetail = {
             <button class="back-btn" @click="$emit('back')">← 返回成员图鉴</button>
             <div class="member-detail-header">
                 <div class="member-detail-avatar" style="position:relative;cursor:pointer;" @click="canUploadAvatar && $refs.avatarInput.click()">
-                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''">
+                    <img v-if="avatarUrl" :src="avatarUrl" :alt="member ? member.name : ''" @error="_localAvatar = null; if(member) member.avatarUrl = ''">
                     <div v-else class="member-avatar-placeholder" :style="{ background: member ? memberAvatarColor(member.name) : '#ccc', width: '100%', height: '100%' }">
                         {{ member ? getInitial(member.name) : '?' }}
                     </div>
@@ -1286,7 +1286,7 @@ const app = createApp({
             if (!GitHub.token && !Store.demoMode) {
                 const year = new Date().getFullYear().toString();
                 Store.currentSeason = { name: `${year} 030精灵捕捉大赛`, year, phase: 'upload', startedAt: new Date().toISOString() };
-                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: '' }));
+                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
                 Store.entries = [];
                 Store.allVotes = [];
                 Store.userVotes = { entryIds: [] };
@@ -1322,7 +1322,7 @@ const app = createApp({
                         Store.members = memberData.filter(Boolean);
                         if (Store.members.length === 0) throw new Error('no members');
                     } catch {
-                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: '' }));
+                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
                     }
 
                     try {
