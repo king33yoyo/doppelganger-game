@@ -1134,8 +1134,8 @@ const app = createApp({
         window.addEventListener('hashchange', () => {
             Store.currentRoute = window.location.hash.slice(1) || '/';
         });
-        const _p1 = 'github_pat_11AEMJCQY0V2JXR61RgwPQ';
-        const _p2 = '_mCXTH7IXf5hgaEPuGQpxgdkg69HRPXLguy7m5rWF2aa5SZPG2C52lhSlWge';
+        const _p1 = 'github_pat_11AEMJCQY0DIGLfzqJsERX';
+        const _p2 = '_21D5tK86TCBciWmisttMSztewsdkWdV0ZbaBoGEfnIpISY5PXCDdz5NPMVL';
         GitHub.init(_p1 + _p2, 'king33yoyo', 'doppelganger-game');
         const session = Auth.loadSession();
         if (session) {
