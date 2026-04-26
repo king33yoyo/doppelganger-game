@@ -332,7 +332,7 @@ const LoginPage = {
         <div class="login-card">
             <div class="login-logo">
                 <h1><span class="pokeball-icon"></span> 030精灵捕捉大赛</h1>
-                <p>找到你最像的那个人</p>
+                <p>欢迎各位精灵捕手</p>
             </div>
             <div v-if="step === 1" class="login-form">
                 <div class="form-group">
@@ -346,7 +346,7 @@ const LoginPage = {
             </div>
             <div v-else class="login-form">
                 <p style="text-align: center; color: var(--c-gray-400); margin-bottom: var(--sp-4);">
-                    你好，<strong :style="{ color: isAdmin ? 'var(--c-accent)' : 'var(--c-primary)' }">{{ isAdmin ? '管理员' : '成员' }}</strong>，选择你的身份
+                    你好，<strong :style="{ color: isAdmin ? 'var(--c-orange)' : 'var(--c-blue)' }">{{ isAdmin ? '管理员' : '精灵捕手' }}</strong>，选择你的身份
                 </p>
                 <div class="nickname-list">
                     <button v-for="m in existingMembers" :key="m" class="nickname-chip"
