@@ -299,6 +299,7 @@ const Store = reactive({
     config: { repoOwner: '', repoName: 'doppelganger-game' },
     currentUser: null,
     demoMode: false,
+    preSelectedMember: '',
     currentRoute: window.location.hash.slice(1) || '/',
     currentSeason: null,
     members: [],
@@ -380,9 +381,16 @@ const LoginPage = {
             this.error = '';
             if (this.password === 'genius1123') {
                 this.isAdmin = true;
-                if (Store.demoMode) { await this._loadDemoMembers(); } else { await this._loadProdMembers(); }
                 const user = { username: '老K', isAdmin: true };
-                Auth.saveSession(user, Store.demoMode ? 'demo' : 'production', Store.config);
+                if (Store.demoMode) {
+                    await this._loadDemoMembers();
+                } else if (GitHub.token) {
+                    await this._loadProdMembers();
+                } else {
+                    this.existingMembers = DEMO_NAMES;
+                }
+                const config = Store.config || { repoOwner: '', repoName: '' };
+                Auth.saveSession(user, Store.demoMode ? 'demo' : 'production', config);
                 Store.currentUser = user;
                 this.$emit('login');
                 return;
@@ -427,7 +435,7 @@ const NavBar = {
                 <div class="nav-brand" @click="$emit('navigate', '/')"><span class="pokeball-sm"></span> 030精灵捕捉大赛</div>
                 <div class="nav-links">
                     <button class="nav-link" :class="{ active: route === '/' }" @click="$emit('navigate', '/')">成员图鉴</button>
-                    <button class="nav-link" :class="{ active: route === '/upload', disabled: phase !== 'upload' }" @click="phase === 'upload' && $emit('navigate', '/upload')">
+                    <button class="nav-link" :class="{ active: route === '/upload' }" @click="$emit('navigate', '/upload')">
                         上传<span class="badge badge-upload" v-if="phase === 'upload'">开放</span>
                     </button>
                     <button class="nav-link" :class="{ active: route === '/vote', disabled: phase !== 'vote' }" @click="phase === 'vote' && $emit('navigate', '/vote')">
@@ -557,7 +565,8 @@ const MemberDetail = {
                 <input type="file" ref="avatarInput" accept="image/*" style="display:none" @change="uploadAvatar">
                 <div>
                     <h2>{{ member ? member.name : '未知成员' }}</h2>
-                    <p style="color: var(--c-gray-400);">{{ memberEntries.length }} 个精灵</p>
+                    <p style="color: var(--c-text-muted);">{{ memberEntries.length }} 个精灵</p>
+                    <button class="btn btn-primary" style="margin-top: 10px; padding: 8px 18px; font-size: 0.85rem;" @click="goUpload">上传精灵</button>
                 </div>
             </div>
             <div class="entry-grid">
@@ -591,6 +600,10 @@ const MemberDetail = {
     },
     methods: {
         memberAvatarColor, getInitial,
+        goUpload() {
+            Store.preSelectedMember = this.memberId;
+            window.location.hash = '/upload';
+        },
         async uploadAvatar(e) {
             const file = e.target.files[0];
             if (!file || !this.member) return;
@@ -656,11 +669,17 @@ const UploadPage = {
     props: ['members', 'season', 'user'],
     data() {
         return {
-            targetMember: '',
+            targetMember: Store.preSelectedMember || '',
             selectedFile: null,
             previewUrl: '',
             isDragover: false
         };
+    },
+    mounted() {
+        if (Store.preSelectedMember) {
+            this.targetMember = Store.preSelectedMember;
+            Store.preSelectedMember = '';
+        }
     },
     methods: {
         handleFileSelect(e) {
