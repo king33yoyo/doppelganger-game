@@ -1185,28 +1185,35 @@ const app = createApp({
                         try { await GitHub.createFile(`data/seasons/${year}/meta.json`, meta, '初始化赛季'); } catch (_) {}
                         Store.currentSeason = meta;
                     }
-                    const memberFiles = await GitHub.listFiles('data/members');
-                    const memberData = await Promise.all(
-                        memberFiles.filter(f => f.name.endsWith('.json')).map(async f => {
-                            try {
-                                const { content } = await GitHub.getFile(`data/members/${f.name}`);
-                                const username = f.name.replace('.json', '');
-                                return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) };
-                            } catch { return null; }
-                        })
-                    );
-                    Store.members = memberData.filter(Boolean);
+                    try {
+                        const memberFiles = await GitHub.listFiles('data/members');
+                        const memberData = await Promise.all(
+                            memberFiles.filter(f => f.name.endsWith('.json')).map(async f => {
+                                try {
+                                    const { content } = await GitHub.getFile(`data/members/${f.name}`);
+                                    const username = f.name.replace('.json', '');
+                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) };
+                                } catch { return null; }
+                            })
+                        );
+                        Store.members = memberData.filter(Boolean);
+                        if (Store.members.length === 0) throw new Error('no members');
+                    } catch {
+                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: '' }));
+                    }
 
-                    const entryFiles = await GitHub.listFiles(`data/seasons/${year}/entries`);
-                    const entryData = await Promise.all(
-                        entryFiles.filter(f => f.name.endsWith('.json')).map(async f => {
-                            try {
-                                const { content } = await GitHub.getFile(`data/seasons/${year}/entries/${f.name}`);
-                                return { ...content, imageUrl: getImageUrl(`images/seasons/${year}/entries/${content.imageName}`) };
-                            } catch { return null; }
-                        })
-                    );
-                    Store.entries = entryData.filter(Boolean);
+                    try {
+                        const entryFiles = await GitHub.listFiles(`data/seasons/${year}/entries`);
+                        const entryData = await Promise.all(
+                            entryFiles.filter(f => f.name.endsWith('.json')).map(async f => {
+                                try {
+                                    const { content } = await GitHub.getFile(`data/seasons/${year}/entries/${f.name}`);
+                                    return { ...content, imageUrl: getImageUrl(`images/seasons/${year}/entries/${content.imageName}`) };
+                                } catch { return null; }
+                            })
+                        );
+                        Store.entries = entryData.filter(Boolean);
+                    } catch { Store.entries = []; }
 
                     if (this.currentUser) {
                         try {
@@ -1215,14 +1222,16 @@ const app = createApp({
                         } catch { Store.userVotes = { entryIds: [] }; }
                     }
 
-                    const voteFiles = await GitHub.listFiles(`data/seasons/${year}/votes`);
-                    const allVoteData = await Promise.all(
-                        voteFiles.filter(f => f.name.endsWith('.json')).map(async f => {
-                            try { const { content } = await GitHub.getFile(`data/seasons/${year}/votes/${f.name}`); return content; }
-                            catch { return null; }
-                        })
-                    );
-                    Store.allVotes = allVoteData.filter(Boolean);
+                    try {
+                        const voteFiles = await GitHub.listFiles(`data/seasons/${year}/votes`);
+                        const allVoteData = await Promise.all(
+                            voteFiles.filter(f => f.name.endsWith('.json')).map(async f => {
+                                try { const { content } = await GitHub.getFile(`data/seasons/${year}/votes/${f.name}`); return content; }
+                                catch { return null; }
+                            })
+                        );
+                        Store.allVotes = allVoteData.filter(Boolean);
+                    } catch { Store.allVotes = []; }
 
                     try {
                         const archiveDirs = await GitHub.listFiles('data/archive');
