@@ -766,6 +766,16 @@ h4 { font-size: 1.05rem; font-weight: 600; }
 .entry-meta { padding: 10px 14px; font-size: 0.82rem; color: var(--c-text-muted); }
 .entry-meta strong { color: var(--c-text); font-weight: 700; }
 
+.entry-delete-btn {
+    position: absolute; top: 8px; right: 8px;
+    width: 28px; height: 28px; border-radius: var(--r-full);
+    background: rgba(0,0,0,0.5); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; cursor: pointer; z-index: 2;
+    transition: background var(--d-fast) var(--ease);
+}
+.entry-delete-btn:hover { background: var(--c-red); }
+
 /* ===== Admin Panel ===== */
 
 .admin-grid {

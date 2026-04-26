@@ -570,12 +570,13 @@ const MemberDetail = {
                 </div>
             </div>
             <div class="entry-grid">
-                <div class="entry-card" v-for="e in memberEntries" :key="e.id">
+                <div class="entry-card" v-for="e in memberEntries" :key="e.id" style="position:relative;">
                     <div class="entry-photo">
                         <img v-if="e.imageUrl" :src="e.imageUrl" loading="lazy">
                         <div v-else class="vote-photo-placeholder">[照片]</div>
                     </div>
                     <div class="entry-meta">由 <strong>{{ e.submitter }}</strong> 上传</div>
+                    <button v-if="canDelete" class="entry-delete-btn" @click="deleteEntry(e)" title="删除">×</button>
                 </div>
             </div>
             <div v-if="memberEntries.length === 0" class="empty-state">
@@ -596,6 +597,9 @@ const MemberDetail = {
         canUploadAvatar() {
             if (!this.currentUser || !this.member) return false;
             return this.currentUser.username === this.memberId || this.currentUser.isAdmin;
+        },
+        canDelete() {
+            return this.currentUser && this.currentUser.isAdmin;
         }
     },
     methods: {
@@ -603,6 +607,26 @@ const MemberDetail = {
         goUpload() {
             Store.preSelectedMember = this.memberId;
             window.location.hash = '/upload';
+        },
+        async deleteEntry(entry) {
+            if (!confirm('确定删除这张精灵照片？')) return;
+            await Store.setLoading(async () => {
+                try {
+                    const year = Store.currentSeason?.year || new Date().getFullYear().toString();
+                    const entryPath = `data/seasons/${year}/entries/${entry.id}.json`;
+                    const { sha } = await GitHub.api(entryPath);
+                    await GitHub.deleteFile(entryPath, sha, `删除精灵: ${entry.id}`);
+                    if (entry.imageName) {
+                        try {
+                            const imgPath = `images/seasons/${year}/entries/${entry.imageName}`;
+                            const { sha: imgSha } = await GitHub.api(imgPath);
+                            await GitHub.deleteFile(imgPath, imgSha, `删除图片: ${entry.imageName}`);
+                        } catch (_) {}
+                    }
+                    Store.notify('已删除', 'success');
+                    this.$emit('avatar-uploaded');
+                } catch (e) { Store.notify('删除失败：' + e.message, 'error'); }
+            });
         },
         async uploadAvatar(e) {
             const file = e.target.files[0];
