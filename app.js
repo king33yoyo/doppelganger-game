@@ -391,7 +391,11 @@ const LoginPage = {
             else { this.error = '密码错误'; return; }
             if (Store.demoMode) { await this._loadDemoMembers(); this.step = 2; return; }
             try {
-                await this._loadProdMembers();
+                if (GitHub.token) {
+                    await this._loadProdMembers();
+                } else {
+                    this.existingMembers = DEMO_NAMES;
+                }
                 this.step = 2;
             } catch (e) { this.error = '连接失败：' + e.message; }
         },
@@ -1059,6 +1063,16 @@ const app = createApp({
         navigate(route) { window.location.hash = route; },
         viewMember(username) { window.location.hash = `/member/${username}`; },
         async loadAllData() {
+            if (!GitHub.token && !Store.demoMode) {
+                const year = new Date().getFullYear().toString();
+                Store.currentSeason = { name: `${year} 030精灵捕捉大赛`, year, phase: 'upload', startedAt: new Date().toISOString() };
+                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: '' }));
+                Store.entries = [];
+                Store.allVotes = [];
+                Store.userVotes = { entryIds: [] };
+                Store.archives = [];
+                return;
+            }
             await Store.setLoading(async () => {
                 try {
                     const year = Store.config.currentSeason || new Date().getFullYear().toString();
