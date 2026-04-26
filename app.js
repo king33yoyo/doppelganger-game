@@ -459,7 +459,7 @@ const NavBar = {
                 </div>
                 <div class="nav-user">
                     <div class="nav-avatar" v-if="userAvatar" style="padding:0;overflow:hidden;">
-                        <img :src="userAvatar" style="width:100%;height:100%;object-fit:cover;">
+                        <img :src="userAvatar" style="width:100%;height:100%;object-fit:cover;" @error="avatarFailed = true">
                     </div>
                     <div class="nav-avatar" v-else :style="{ background: memberAvatarColor(user.username) }">{{ getInitial(user.username) }}</div>
                     <span class="nav-username">{{ user.username }}</span>
@@ -469,14 +469,18 @@ const NavBar = {
         </nav>
     `,
     props: ['user', 'season'],
+    data() { return { avatarFailed: false }; },
     computed: {
         route() { return Store.currentRoute; },
         phase() { return this.season ? this.season.phase : ''; },
         userAvatar() {
-            if (!this.user) return '';
+            if (this.avatarFailed || !this.user) return '';
             const m = Store.members.find(m => m.username === this.user.username);
             return m && m.avatarUrl ? m.avatarUrl : '';
         }
+    },
+    watch: {
+        'user.username'() { this.avatarFailed = false; }
     },
     methods: {
         memberAvatarColor,
@@ -538,8 +542,8 @@ const MemberWall = {
                             <div class="member-avatar-placeholder" :style="{ background: memberAvatarColor(m.name) }">
                                 {{ getInitial(m.name) }}
                             </div>
-                            <img v-if="m.avatarUrl" :src="m.avatarUrl" :alt="m.name" loading="lazy"
-                                 style="position:absolute;inset:0;" @error="$event.target.style.display='none'">
+                            <img v-if="m.avatarUrl && !imgErrors[m.username]" :src="m.avatarUrl" :alt="m.name"
+                                 style="position:absolute;inset:0;" @error="imgErrors[m.username] = true">
                         </div>
                         <div class="member-name">{{ m.name }}</div>
                         <div class="member-count">
@@ -557,6 +561,7 @@ const MemberWall = {
         </div>
     `,
     props: ['members', 'entries', 'season'],
+    data() { return { imgErrors: {} }; },
     methods: {
         memberAvatarColor,
         getInitial,
@@ -1279,6 +1284,7 @@ const app = createApp({
                 Store.currentUser = session.user;
                 this.currentUser = session.user;
                 await this.loadAllData();
+                Store.notify(`数据加载完成：${Store.members.length} 位成员`, 'success');
                 this.isLoggedIn = true;
             }
         },
@@ -1297,7 +1303,8 @@ const app = createApp({
             if (!GitHub.token && !Store.demoMode) {
                 const year = new Date().getFullYear().toString();
                 Store.currentSeason = { name: `${year} 030精灵捕捉大赛`, year, phase: 'upload', startedAt: new Date().toISOString() };
-                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
+                const _t = Date.now();
+                Store.members = DEMO_NAMES.map((name, i) => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) + '?t=' + _t }));
                 Store.entries = [];
                 Store.allVotes = [];
                 Store.userVotes = { entryIds: [] };
@@ -1326,14 +1333,15 @@ const app = createApp({
                                 try {
                                     const { content } = await GitHub.getFile(`data/members/${f.name}`);
                                     const username = f.name.replace('.json', '');
-                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) };
+                                    return { ...content, username, avatarUrl: getImageUrl(`images/members/${username}.jpg`) + '?t=' + Date.now() };
                                 } catch { return null; }
                             })
                         );
                         Store.members = memberData.filter(Boolean);
                         if (Store.members.length === 0) throw new Error('no members');
                     } catch {
-                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) }));
+                        const _t = Date.now();
+                        Store.members = DEMO_NAMES.map(name => ({ username: name, name, avatarUrl: getImageUrl(`images/members/${name}.jpg`) + '?t=' + _t }));
                     }
 
                     try {
